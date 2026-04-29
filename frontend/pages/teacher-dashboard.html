@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExamPulse — Teacher Dashboard</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+<div class="app-layout">
+  <div id="layoutSidebar"></div>
+  <main class="main-content">
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="page-title">Teacher Dashboard</div>
+        <div class="page-subtitle" id="teacherWelcome">Manage quizzes and view student performance</div>
+      </div>
+      <button class="btn btn-accent" onclick="window.location.href='teacher-create-quiz.html'">
+        ➕ Create New Quiz
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📚</div>
+        <div class="stat-value" id="statQuizzes">0</div>
+        <div class="stat-label">Total Quizzes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="statStudents">0</div>
+        <div class="stat-label">Students</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📝</div>
+        <div class="stat-value" id="statAttempts">0</div>
+        <div class="stat-label">Total Attempts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value" id="statAvgScore">—</div>
+        <div class="stat-label">Avg Score</div>
+      </div>
+    </div>
+
+    <!-- Active Quiz Status -->
+    <div class="section-title">🟢 Active Test</div>
+    <div id="activeQuizCard" style="margin-bottom:28px;"></div>
+
+    <!-- Quick links -->
+    <div class="section-title">🔗 Quick Actions</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;">
+      <button class="btn btn-outline" onclick="window.location.href='teacher-quizzes.html'">📚 Manage Quizzes</button>
+      <button class="btn btn-outline" onclick="window.location.href='teacher-results.html'">📊 View Results</button>
+      <button class="btn btn-accent"  onclick="window.location.href='teacher-create-quiz.html'">➕ Create Quiz</button>
+    </div>
+
+    <!-- Recent Results Preview -->
+    <div class="section-title">📋 Recent Student Results</div>
+    <div class="card" id="recentResults"></div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script src="../js/layout.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!UI.requireAuth('teacher')) throw new Error();
+  document.getElementById('layoutSidebar').innerHTML = LAYOUT.teacherSidebar;
+  UI.initSidebar(); UI.initUserInfo(); UI.initLogout();
+  UI.setActiveNav('nav-dashboard');
+
+  document.getElementById('teacherWelcome').textContent = `Welcome back, ${APP.currentUser.name}`;
+
+  // Stats
+  const students = APP.users.filter(u => u.role === 'student');
+  const allResults = APP.getAllResults();
+  document.getElementById('statQuizzes').textContent  = APP.quizzes.length;
+  document.getElementById('statStudents').textContent = students.length;
+  document.getElementById('statAttempts').textContent = allResults.length;
+  if (allResults.length) {
+    const avg = Math.round(allResults.reduce((a,r) => a + r.percent, 0) / allResults.length);
+    document.getElementById('statAvgScore').textContent = avg + '%';
+  }
+
+  // Active quiz card
+  const active = APP.getActiveQuiz();
+  const activeEl = document.getElementById('activeQuizCard');
+  if (active) {
+    activeEl.innerHTML = `
+      <div class="available-test-card">
+        <div class="available-tag">🟢 Currently Active</div>
+        <div class="available-title">${active.title}</div>
+        <div class="available-meta">
+          <div class="meta-item">📚 ${active.subject}</div>
+          <div class="meta-item">⏱️ ${active.duration} min</div>
+          <div class="meta-item">📝 ${active.questions.length} questions</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="window.location.href='teacher-quizzes.html'">Manage →</button>
+          <button class="btn btn-danger-outline btn-sm" onclick="deactivate('${active.id}')">Deactivate</button>
+        </div>
+      </div>
+    `;
+  } else {
+    activeEl.innerHTML = `<div class="card-sm" style="color:var(--text-muted);font-size:0.88rem;">No active test. Go to <a href="teacher-quizzes.html" style="color:var(--accent)">Manage Quizzes</a> to activate one.</div>`;
+  }
+
+  // Recent results table
+  const recentEl = document.getElementById('recentResults');
+  if (!allResults.length) {
+    recentEl.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No results yet.</div></div>`;
+  } else {
+    const rows = allResults.slice(-5).reverse().map(r => `
+      <tr>
+        <td class="td-primary">${r.userName}</td>
+        <td>${r.quizTitle}</td>
+        <td><strong>${r.score}/${r.total}</strong></td>
+        <td><span class="badge ${APP.badgeClass(r.percent)}">${r.percent}%</span></td>
+        <td style="font-size:0.78rem;color:var(--text-muted)">${APP.formatDate(r.date)}</td>
+      </tr>
+    `).join('');
+    recentEl.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Student</th><th>Quiz</th><th>Score</th><th>%</th><th>Date</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="padding:12px 0 0;text-align:right;">
+        <button class="btn btn-outline btn-sm" onclick="window.location.href='teacher-results.html'">View All Results →</button>
+      </div>
+    `;
+  }
+
+  function deactivate(id) {
+    UI.confirm('Deactivate Quiz?', 'Students will no longer be able to take this quiz.', () => {
+      APP.quizzes.find(q => q.id === id).active = false;
+      UI.toast('Quiz deactivated.', 'info');
+      setTimeout(() => location.reload(), 800);
+    });
+  }
+</script>
+</body>
+</html>

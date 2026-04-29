@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Quiz — ExamPulse</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <div id="layoutSidebar"></div>
+
+      <main class="main-content">
+        <div class="page-header">
+          <div class="page-title">Create Quiz</div>
+          <div class="page-subtitle">Add questions and publish your quiz</div>
+        </div>
+        <div style="max-width: 800px">
+          <!-- Quiz Details -->
+          <div class="card" style="margin-bottom: 28px">
+            <div
+              style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem"
+            >
+              Quiz Details
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Quiz Title</label>
+              <input
+                type="text"
+                id="quizTitle"
+                class="form-input"
+                placeholder="e.g., Week 5 — Mathematics"
+              />
+            </div>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1.5rem;
+                margin-bottom: 1.5rem;
+              "
+            >
+              <div class="form-group" style="margin-bottom: 0">
+                <label class="form-label">Subject</label>
+                <input
+                  type="text"
+                  id="quizSubject"
+                  class="form-input"
+                  placeholder="e.g., Mathematics"
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <label class="form-label">Duration (minutes)</label>
+                <input
+                  type="number"
+                  id="quizDuration"
+                  class="form-input"
+                  placeholder="15"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Total Marks</label>
+              <input
+                type="number"
+                id="quizMarks"
+                class="form-input"
+                placeholder="5"
+              />
+            </div>
+          </div>
+
+          <!-- Add Question -->
+          <div class="card" style="margin-bottom: 28px">
+            <div
+              style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem"
+            >
+              Add Question
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Question Text</label>
+              <textarea
+                id="questionText"
+                class="form-input"
+                placeholder="Enter the question"
+                style="min-height: 80px; padding: 12px; resize: vertical"
+              ></textarea>
+            </div>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+              "
+            >
+              <div class="form-group" style="margin-bottom: 0">
+                <label class="form-label">Option 1</label>
+                <input
+                  type="text"
+                  class="form-input question-option"
+                  placeholder="Answer option"
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <label class="form-label">Option 2</label>
+                <input
+                  type="text"
+                  class="form-input question-option"
+                  placeholder="Answer option"
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <label class="form-label">Option 3</label>
+                <input
+                  type="text"
+                  class="form-input question-option"
+                  placeholder="Answer option"
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <label class="form-label">Option 4</label>
+                <input
+                  type="text"
+                  class="form-input question-option"
+                  placeholder="Answer option"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Correct Answer (0-3)</label>
+              <input
+                type="number"
+                id="correctOption"
+                class="form-input"
+                min="0"
+                max="3"
+                placeholder="0"
+              />
+            </div>
+
+            <button
+              class="btn-primary"
+              onclick="addQuestion()"
+              style="width: 100%; margin-bottom: 0"
+            >
+              + Add Question
+            </button>
+          </div>
+
+          <!-- Questions Preview -->
+          <div class="card" style="margin-bottom: 28px">
+            <div
+              style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem"
+            >
+              Questions (<span id="qCount">0</span>)
+            </div>
+            <div
+              id="questionsPreview"
+              style="max-height: 400px; overflow-y: auto"
+            >
+              <p
+                style="
+                  color: var(--text-muted);
+                  text-align: center;
+                  padding: 2rem 0;
+                "
+              >
+                No questions added yet
+              </p>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; gap: 1rem; margin-bottom: 28px">
+            <button class="btn-primary" onclick="saveQuiz()" style="flex: 1">
+              Save & Publish
+            </button>
+            <button
+              class="btn-secondary"
+              onclick="window.history.back()"
+              style="flex: 1"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script src="../js/layout.js"></script>
+    <script src="../js/ui.js"></script>
+    <script>
+      let newQuestions = [];
+
+      function addQuestion() {
+        const text = document.getElementById("questionText").value.trim();
+        const options = Array.from(
+          document.querySelectorAll(".question-option"),
+        ).map((el) => el.value.trim());
+        const correct = parseInt(
+          document.getElementById("correctOption").value,
+        );
+
+        if (!text || options.some((o) => !o) || isNaN(correct)) {
+          UI.toast("Please fill all fields", "error");
+          return;
+        }
+
+        const q = {
+          id: "q_" + Date.now(),
+          text,
+          options,
+          correct,
+        };
+        newQuestions.push(q);
+        updateQuestionsPreview();
+        document.getElementById("questionText").value = "";
+        document
+          .querySelectorAll(".question-option")
+          .forEach((el) => (el.value = ""));
+        document.getElementById("correctOption").value = "";
+      }
+
+      function updateQuestionsPreview() {
+        const container = document.getElementById("questionsPreview");
+        document.getElementById("qCount").textContent = newQuestions.length;
+
+        if (newQuestions.length === 0) {
+          container.innerHTML =
+            '<p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">No questions added yet</p>';
+          return;
+        }
+
+        container.innerHTML = newQuestions
+          .map(
+            (q, i) => `
+        <div style="padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: start;">
+          <div style="flex: 1;">
+            <strong>${i + 1}. ${q.text}</strong>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">
+              ${q.options.map((opt, j) => `<div>${j}: ${opt} ${j === q.correct ? "✓" : ""}</div>`).join("")}
+            </div>
+          </div>
+          <button onclick="removeQuestion(${i})" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.2rem;">×</button>
+        </div>
+      `,
+          )
+          .join("");
+      }
+
+      function removeQuestion(index) {
+        newQuestions.splice(index, 1);
+        updateQuestionsPreview();
+      }
+
+      async function saveQuiz() {
+        const title = document.getElementById("quizTitle").value.trim();
+        const subject = document.getElementById("quizSubject").value.trim();
+        const duration = parseInt(
+          document.getElementById("quizDuration").value,
+        );
+        const marks = parseInt(document.getElementById("quizMarks").value);
+
+        if (!title || !subject || !duration || !marks) {
+          UI.toast("Please fill quiz details", "error");
+          return;
+        }
+
+        if (newQuestions.length === 0) {
+          UI.toast("Please add at least one question", "error");
+          return;
+        }
+
+        const quiz = await APP.createQuiz({
+          title,
+          subject,
+          duration,
+          questions: newQuestions,
+          active: false,
+        });
+
+        if (quiz) {
+          UI.toast("Quiz created successfully!", "success");
+          setTimeout(
+            () => (window.location.href = "teacher-quizzes.html"),
+            1000,
+          );
+        } else {
+          UI.toast("Failed to create quiz. Please try again.", "error");
+        }
+      }
+
+      if (!UI.requireAuth("teacher")) throw new Error("not auth");
+
+      // Inject sidebar
+      document.getElementById("layoutSidebar").innerHTML =
+        LAYOUT.teacherSidebar;
+      UI.initSidebar();
+      UI.initUserInfo();
+      UI.initLogout();
+    </script>
+  </body>
+</html>
