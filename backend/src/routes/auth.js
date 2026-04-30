@@ -1,67 +1,62 @@
-const express = require('express');
-const router = express.Router();
+const jwt  = require('jsonwebtoken');
 const User = require('../models/User');
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
+// Helper to sign a JWT token
+const signToken = (id) =>
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
 
-    if (!username || !password) {
-      return res.status(400).json({ ok: false, error: 'Username and password required' });
-    }
-
-    const user = await User.findOne({ username });
-
-    if (!user || user.password !== password) {
-      return res.status(401).json({ ok: false, error: 'Invalid username or password.' });
-    }
-
-    res.json({
-      ok: true,
-      user: {
-        id: user._id,
-        username: user.username,
-        name: user.name,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
+// Helper to send token response
+const sendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+  res.status(statusCode).json({
+    success: true,
+    token,
+    user: {
+      id:         user._id,
+      name:       user.name,
+      email:      user.email,
+      role:       user.role,
+    },
+  });
+};
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
-    const { username, password, name, role } = req.body;
-
-    if (!username || !password || !name || !role) {
-      return res.status(400).json({ ok: false, error: 'All fields required' });
-    }
-
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      return res.status(409).json({ ok: false, error: 'Username already exists' });
-    }
-
-    const newUser = new User({ username, password, name, role });
-    await newUser.save();
-
-    res.status(201).json({
-      ok: true,
-      user: {
-        id: newUser._id,
-        username: newUser.username,
-        name: newUser.name,
-        role: newUser.role,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ ok: false, error: 'Server error' });
+    const { name, email, password, } = req.body;
+    const user = await User.create({ name, email, password, studentId, department, semester });
+    sendToken(user, 201, res);
+  } catch (err) {
+    next(err);
   }
-});
+};
 
-module.exports = router;
+// POST /api/auth/login
+exports.login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Provide email and password' });
+    }
+
+    // select('+password') because password has select:false in schema
+    const user = await User.findOne({ email }).select('+password');
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Account is deactivated' });
+    }
+
+    sendToken(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/auth/me  (protected)
+exports.getMe = async (req, res) => {
+  res.status(200).json({ success: true, user: req.user });
+};

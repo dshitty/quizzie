@@ -26,11 +26,7 @@ const userSchema = new mongoose.Schema(
       enum: ['student', 'admin'],
       default: 'student',
     },
-    // Student-specific info
-    studentId: {
-      type: String,
-      trim: true,
-    },
+
     isActive: {
       type: Boolean,
       default: true,
