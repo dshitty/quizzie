@@ -1,7 +1,3 @@
-# Backend Project Setup
-
-This is an Express.js + MongoDB backend project serving frontend files from `C:\Users\DRSN\exampulse`.
-
 ## Project Configuration
 
 - **Server**: Express.js
