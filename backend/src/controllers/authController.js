@@ -16,9 +16,7 @@ const sendToken = (user, statusCode, res) => {
       name:       user.name,
       email:      user.email,
       role:       user.role,
-      studentId:  user.studentId,
-      department: user.department,
-      semester:   user.semester,
+
     },
   });
 };
@@ -26,8 +24,8 @@ const sendToken = (user, statusCode, res) => {
 // POST /api/auth/register
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, studentId, department, semester } = req.body;
-    const user = await User.create({ name, email, password, studentId, department, semester });
+    const { name, email, password } = req.body;
+    const user = await User.create({ name, email, password, role:"student" });
     sendToken(user, 201, res);
   } catch (err) {
     next(err);

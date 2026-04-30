@@ -21,15 +21,15 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false, 
     },
-    role: {
-      type: String,
-      enum: ['student', 'admin'],
-      default: 'student',
-    },
+   role: {
+    type: String,
+    enum: ['student', 'admin'],
+    default: 'student',
+} ,
 
     isActive: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   { timestamps: true } // Adds createdAt and updatedAt automatically

@@ -3,8 +3,8 @@ const express      = require('express');
 const cors         = require('cors');
 const helmet       = require('helmet');
 const morgan       = require('morgan');
-const connectDB    = require('./src/config/db');
-const errorHandler = require('./src/middleware/errorHandler');
+const connectDB    = require('../src/config/db');
+const errorHandler = require('../src/middleware/errorHandler');
 
 const app = express();
 
@@ -18,9 +18,9 @@ app.use(express.json());               // Parse JSON request bodies
 app.use(morgan('dev'));                // Log every request in dev
 
 // ── Routes ──────────────────────────────────────────────────
-app.use('/api/auth',     require('./src/routes/authRoutes'));
-app.use('/api/exams',    require('./src/routes/examRoutes'));
-app.use('/api/attempts', require('./src/routes/attemptRoutes'));
+app.use('/api/auth',     require('../src/routes/authRoutes'));
+app.use('/api/exams',    require('../src/routes/examRoutes'));
+app.use('/api/attempts', require('../src/routes/attemptRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }));
@@ -28,5 +28,5 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', env: process.env.N
 // ── Global Error Handler ─────────────────────────────────────
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const PORT = process.env.PORT ;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
