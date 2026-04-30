@@ -1,42 +1,32 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const connectDB = require('./config/database');
+const express      = require('express');
+const cors         = require('cors');
+const helmet       = require('helmet');
+const morgan       = require('morgan');
+const connectDB    = require('./src/config/db');
+const errorHandler = require('./src/middleware/errorHandler');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Connect to MongoDB
+// ── Connect to MongoDB ──────────────────────────────────────
 connectDB();
 
-// Serve static frontend files
-const frontendPath = path.join(__dirname, '../../frontend');
-app.use(express.static(frontendPath));
+// ── Global Middleware ───────────────────────────────────────
+app.use(helmet());                     // Sets secure HTTP headers
+app.use(cors());                       // Allow frontend to call this API
+app.use(express.json());               // Parse JSON request bodies
+app.use(morgan('dev'));                // Log every request in dev
 
-// Routes
-app.use('/api', require('./routes/index'));
+// ── Routes ──────────────────────────────────────────────────
+app.use('/api/auth',     require('./src/routes/authRoutes'));
+app.use('/api/exams',    require('./src/routes/examRoutes'));
+app.use('/api/attempts', require('./src/routes/attemptRoutes'));
 
-// Fallback to index.html for client-side routing
-app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(404).json({ message: 'Not found' });
-    }
-  });
-});
+// Health check
+app.get('/api/health', (req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Internal server error' });
-});
+// ── Global Error Handler ─────────────────────────────────────
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
