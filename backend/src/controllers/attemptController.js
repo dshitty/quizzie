@@ -6,7 +6,11 @@ exports.startAttempt = async (req, res, next) => {
   try {
     const exam = await Exam.findById(req.params.examId);
     if (!exam) return res.status(404).json({ success: false, message: 'Exam not found' });
-    if (!exam.isOpen) return res.status(403).json({ success: false, message: 'Exam is not open' });
+    
+    // Check if exam is open (active + between scheduled/expiration dates)
+    const now = new Date();
+    const isOpen = exam.status === 'active' && now >= exam.scheduledAt && now <= exam.expiresAt;
+    if (!isOpen) return res.status(403).json({ success: false, message: 'Exam is not open' });
 
     // Check if student already started this exam
     const existing = await Attempt.findOne({ student: req.user._id, exam: exam._id });
@@ -34,12 +38,20 @@ exports.submitAttempt = async (req, res, next) => {
     const { answers } = req.body;
     // answers = [{ questionId, selectedOption }]
 
+    console.log('📝 Submit request:', { examId: req.params.examId, answersCount: answers?.length, answers });
+
     const attempt = await Attempt.findOne({ student: req.user._id, exam: req.params.examId });
     if (!attempt) return res.status(404).json({ success: false, message: 'No attempt found — start the exam first' });
     if (attempt.isSubmitted) return res.status(400).json({ success: false, message: 'Already submitted' });
 
     // Fetch the exam WITH correct answers for grading
     const exam = await Exam.findById(req.params.examId);
+
+    // Prevent submission if exam already expired
+    const now = new Date();
+    if (exam.expiresAt && now > exam.expiresAt) {
+      return res.status(403).json({ success: false, message: 'Cannot submit — the exam has expired' });
+    }
 
     // Build a map of questionId → correctOption for fast lookup
     const correctMap = {};
@@ -61,7 +73,7 @@ exports.submitAttempt = async (req, res, next) => {
     const percentage        = Math.round((totalScore / exam.totalMarks) * 100);
     const isPassed          = totalScore >= exam.passingMarks;
 
-    // Save everything
+    // Save everything with immediate auto-publish
     attempt.answers          = gradedAnswers;
     attempt.totalScore       = totalScore;
     attempt.totalMarks       = exam.totalMarks;
@@ -70,16 +82,28 @@ exports.submitAttempt = async (req, res, next) => {
     attempt.submittedAt      = submittedAt;
     attempt.timeTakenMinutes = timeTakenMinutes;
     attempt.isSubmitted      = true;
+    attempt.resultPublished  = true;  // Auto-publish immediately
+    attempt.publishedAt      = submittedAt;
 
-    await attempt.save();
+    console.log('💾 Saving attempt:', { totalScore, percentage, isPassed, gradedAnswers: gradedAnswers.length });
+
+    try {
+      await attempt.save();
+      console.log('✅ Attempt saved successfully!');
+    } catch (saveErr) {
+      console.error('❌ Error saving attempt:', saveErr.message, saveErr.errors);
+      return res.status(400).json({ success: false, message: `Validation error: ${saveErr.message}` });
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Exam submitted successfully. Result will be available once released by admin.',
+      message: 'Exam submitted successfully. Your result is now available!',
       data: {
         submitted:         true,
         timeTakenMinutes,
         totalQuestionsAnswered: answers.filter(a => a.selectedOption).length,
+        totalScore,
+        percentage,
       },
     });
   } catch (err) {
@@ -94,10 +118,10 @@ exports.getMyAttempts = async (req, res, next) => {
       .populate('exam', 'title subject totalMarks scheduledAt')
       .sort('-submittedAt');
 
-    // Hide score/answers if result not released yet
+    // Hide score/answers if result not published yet
     const safeAttempts = attempts.map(a => {
       const obj = a.toObject();
-      if (!obj.resultReleased) {
+      if (!obj.resultPublished) {
         delete obj.answers;
         delete obj.totalScore;
         delete obj.percentage;
@@ -112,15 +136,15 @@ exports.getMyAttempts = async (req, res, next) => {
   }
 };
 
-// GET /api/attempts/result/:examId  — Student views result (only if released)
+// GET /api/attempts/result/:examId  — Student views result (auto-published immediately after scoring)
 exports.getMyResult = async (req, res, next) => {
   try {
     const attempt = await Attempt.findOne({ student: req.user._id, exam: req.params.examId })
       .populate('exam', 'title subject questions totalMarks passingMarks');
 
     if (!attempt) return res.status(404).json({ success: false, message: 'No attempt found' });
-    if (!attempt.resultReleased) {
-      return res.status(403).json({ success: false, message: 'Result not released yet. Please check back later.' });
+    if (!attempt.resultPublished) {
+      return res.status(403).json({ success: false, message: 'Result not available yet. Please submit your exam first.' });
     }
 
     res.status(200).json({ success: true, data: attempt });

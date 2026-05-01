@@ -26,7 +26,11 @@ const attemptSchema = new mongoose.Schema(
     submittedAt: { type: Date },
     timeTakenMinutes: { type: Number },
 
-    // Result gate — admin must release before student can see result
+    // Result visibility — auto-published immediately after scoring
+    resultPublished: { type: Boolean, default: false },
+    publishedAt:     { type: Date },
+
+    // Admin release — for formal result release (audit trail)
     resultReleased: { type: Boolean, default: false },
     releasedAt:     { type: Date },
     releasedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

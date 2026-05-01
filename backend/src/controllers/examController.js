@@ -5,6 +5,20 @@ const Exam = require('../models/Exam');
 // POST /api/exams  — Create exam
 exports.createExam = async (req, res, next) => {
   try {
+    const { scheduledAt, expiresAt, durationMinutes } = req.body;
+
+    if (scheduledAt && expiresAt && durationMinutes) {
+      const start = new Date(scheduledAt);
+      const end = new Date(expiresAt);
+      const windowMinutes = Math.round((end - start) / 60000);
+      if (windowMinutes <= 0) {
+        return res.status(400).json({ success: false, message: 'expiresAt must be after scheduledAt' });
+      }
+      if (durationMinutes > windowMinutes) {
+        return res.status(400).json({ success: false, message: `Duration (${durationMinutes}m) cannot exceed scheduled window (${windowMinutes}m)` });
+      }
+    }
+
     const exam = await Exam.create({ ...req.body, createdBy: req.user._id });
     res.status(201).json({ success: true, data: exam });
   } catch (err) {
@@ -42,6 +56,21 @@ exports.updateExam = async (req, res, next) => {
     if (exam.status !== 'draft') {
       return res.status(400).json({ success: false, message: 'Can only edit exams in draft status' });
     }
+    // Validate duration does not exceed scheduled window when dates/duration are changed
+    const newScheduled = req.body.scheduledAt ? new Date(req.body.scheduledAt) : exam.scheduledAt;
+    const newExpires = req.body.expiresAt ? new Date(req.body.expiresAt) : exam.expiresAt;
+    const newDuration = req.body.durationMinutes !== undefined ? req.body.durationMinutes : exam.durationMinutes;
+
+    if (newScheduled && newExpires && newDuration !== undefined) {
+      const windowMinutes = Math.round((newExpires - newScheduled) / 60000);
+      if (windowMinutes <= 0) {
+        return res.status(400).json({ success: false, message: 'expiresAt must be after scheduledAt' });
+      }
+      if (newDuration > windowMinutes) {
+        return res.status(400).json({ success: false, message: `Duration (${newDuration}m) cannot exceed scheduled window (${windowMinutes}m)` });
+      }
+    }
+
     const updated = await Exam.findByIdAndUpdate(req.params.id, req.body, {
       new: true, runValidators: true,
     });
@@ -71,7 +100,7 @@ exports.deleteExam = async (req, res, next) => {
     const exam = await Exam.findById(req.params.id);
     if (!exam) return res.status(404).json({ success: false, message: 'Exam not found' });
     if (exam.status === 'active') {
-      return res.status(400).json({ success: false, message: 'Cannot delete an active exam' });
+      return res.status(400).json({ success: false, message: 'Cannot delete a published exam. Unpublish it first.' });
     }
     await exam.deleteOne();
     res.status(200).json({ success: true, message: 'Exam deleted' });
@@ -85,11 +114,8 @@ exports.deleteExam = async (req, res, next) => {
 // GET /api/exams/available  — Student sees only open exams, WITHOUT correct answers
 exports.getAvailableExams = async (req, res, next) => {
   try {
-    const now = new Date();
     const exams = await Exam.find({
       status: 'active',
-      scheduledAt: { $lte: now },
-      expiresAt:   { $gte: now },
     }).select('-questions.correctOption'); // NEVER send correct answers to student
     res.status(200).json({ success: true, count: exams.length, data: exams });
   } catch (err) {
@@ -102,7 +128,19 @@ exports.getExamForStudent = async (req, res, next) => {
   try {
     const exam = await Exam.findById(req.params.id).select('-questions.correctOption');
     if (!exam) return res.status(404).json({ success: false, message: 'Exam not found' });
-    if (!exam.isOpen) return res.status(403).json({ success: false, message: 'Exam is not currently open' });
+    
+    // Check if exam is open
+    const now = new Date();
+    if (exam.status !== 'active') {
+      return res.status(403).json({ success: false, message: 'Exam is not published yet' });
+    }
+    if (now < exam.scheduledAt) {
+      return res.status(403).json({ success: false, message: `Exam will start on ${exam.scheduledAt.toLocaleDateString()} at ${exam.scheduledAt.toLocaleTimeString()}` });
+    }
+    if (now > exam.expiresAt) {
+      return res.status(403).json({ success: false, message: 'This exam has expired and is no longer available' });
+    }
+    
     res.status(200).json({ success: true, data: exam });
   } catch (err) {
     next(err);

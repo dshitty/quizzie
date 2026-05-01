@@ -25,7 +25,7 @@ const sendToken = (user, statusCode, res) => {
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
-    const user = await User.create({ name, email, password, role:"student" });
+    const user = await User.create({ name, email, password, role:"student", isActive: true });
     sendToken(user, 201, res);
   } catch (err) {
     next(err);
@@ -60,4 +60,14 @@ exports.login = async (req, res, next) => {
 // GET /api/auth/me  (protected)
 exports.getMe = async (req, res) => {
   res.status(200).json({ success: true, user: req.user });
+};
+
+// GET /api/auth/students/count  (admin only)
+exports.getStudentCount = async (req, res, next) => {
+  try {
+    const count = await User.countDocuments({ role: 'student' });
+    res.status(200).json({ success: true, count });
+  } catch (err) {
+    next(err);
+  }
 };
