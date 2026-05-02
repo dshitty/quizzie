@@ -12,6 +12,9 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const { user, logout } = useAuth();
   const now = new Date();
+  const ongoingExams = exams.filter((exam) => new Date(exam.scheduledAt) <= now && new Date(exam.expiresAt) >= now);
+  const upcomingExams = exams.filter((exam) => new Date(exam.scheduledAt) > now);
+
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -150,6 +153,15 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Quick access */}
+        <div style={{ marginBottom: '18px' }}>
+          <Link href="/attempts">
+            <button className="btn-primary" style={{ padding: '10px 14px', fontWeight: 700 }}>
+              📋 My Attempts
+            </button>
+          </Link>
+        </div>
+
         {/* Error message */}
         {error && (
           <div style={{ background: 'rgba(255,90,90,0.12)', border: '1px solid rgba(255,90,90,0.3)', borderRadius: 'var(--radius-md)', color: 'var(--danger)', padding: '12px 16px', marginBottom: '24px' }}>
@@ -158,74 +170,120 @@ export default function Dashboard() {
         )}
 
         {/* Exams section */}
-        <div>
-          <div style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            📚 Published Exams
-          </div>
-
-          {loading ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 20px' }}>
-              Loading exams...
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🟢 Ongoing Exams
             </div>
-          ) : exams.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📭</div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
-                No open exams right now
-              </div>
-              <div style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-                Published exams only appear here when the scheduled start time has begun and the exam has not expired yet.
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '16px',
-              }}
-            >
-              {exams.map((exam) => (
-                <div key={exam._id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'all 0.2s' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                      {exam.title}
-                    </h3>
-                    <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                      {exam.subject || 'General'}
-                    </p>
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      <span>⏱️ {exam.durationMinutes || 60} min</span>
-                      <span>❓ {exam.questions?.length || 0} Q&apos;s</span>
-                    </div>
-                    <div style={{ marginTop: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      {new Date(exam.scheduledAt) > now
-                        ? `Starts ${new Date(exam.scheduledAt).toLocaleString()}`
-                        : new Date(exam.expiresAt) < now
-                          ? 'Ended'
-                          : 'Available now'}
-                    </div>
-                  </div>
 
-                  {new Date(exam.scheduledAt) <= now && new Date(exam.expiresAt) >= now ? (
+            {loading ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 20px' }}>
+                Loading exams...
+              </div>
+            ) : ongoingExams.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: '32px 20px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🕒</div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
+                  No ongoing exams right now
+                </div>
+                <div style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                  Exams appear here once their scheduled start time begins.
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '16px',
+                }}
+              >
+                {ongoingExams.map((exam) => (
+                  <div key={exam._id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'all 0.2s' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                        {exam.title}
+                      </h3>
+                      <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                        {exam.subject || 'General'}
+                      </p>
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        <span>⏱️ {exam.durationMinutes || 60} min</span>
+                        <span>❓ {exam.questions?.length || 0} Q&apos;s</span>
+                      </div>
+                      <div style={{ marginTop: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        Available now
+                      </div>
+                    </div>
+
                     <Link href={`/exam/${exam._id}/instructions`}>
                       <button className="btn-primary" style={{ marginTop: '16px' }}>
                         Start Exam →
                       </button>
                     </Link>
-                  ) : (
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🔵 Upcoming Exams
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 20px' }}>
+                Loading exams...
+              </div>
+            ) : upcomingExams.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: '32px 20px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📭</div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
+                  No upcoming exams
+                </div>
+                <div style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                  Future published exams will show here before they start.
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '16px',
+                }}
+              >
+                {upcomingExams.map((exam) => (
+                  <div key={exam._id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'all 0.2s' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                        {exam.title}
+                      </h3>
+                      <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                        {exam.subject || 'General'}
+                      </p>
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        <span>⏱️ {exam.durationMinutes || 60} min</span>
+                        <span>❓ {exam.questions?.length || 0} Q&apos;s</span>
+                      </div>
+                      <div style={{ marginTop: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        Starts {new Date(exam.scheduledAt).toLocaleString()}
+                      </div>
+                    </div>
+
                     <button
                       className="btn-primary"
                       style={{ marginTop: '16px', opacity: 0.55, cursor: 'not-allowed' }}
                       disabled
                     >
-                      {new Date(exam.scheduledAt) > now ? 'Starts Later' : 'Exam Ended'}
+                      Starts Later
                     </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -256,7 +256,7 @@ export default function AttemptsPage() {
                         {attempt.totalScore}/{attempt.totalMarks}
                       </div>
                     </div>
-                  ))
+                  )}
 
                   {/* Action buttons */}
                   <div style={{ display: 'flex', gap: '8px' }}>

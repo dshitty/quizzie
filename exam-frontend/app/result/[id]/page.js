@@ -10,6 +10,7 @@ export default function ResultPage() {
   const params = useParams();
   const resultId = params.id;
   const { user } = useAuth();
+
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,6 +43,7 @@ export default function ResultPage() {
   const totalQuestions = result?.answers?.length || 0;
   const totalScore = result?.totalScore || 0;
   const totalMarks = result?.totalMarks || 0;
+  const isPublished = !!(result?.resultPublished || result?.resultReleased || result?.published);
   
   // Determine back button path based on user role
   const backLink = user?.role === 'admin' ? '/admin/attempts' : '/dashboard';
@@ -157,24 +159,84 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Details */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '24px' }}>
-          <div style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
-            Test Details
+        {/* Details or Not Published */}
+        {!isPublished ? (
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>Result is not published yet</div>
+            <div style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}>You will be able to view a detailed breakdown once the instructor publishes results.</div>
+            <div style={{ color: 'var(--text-secondary)' }}>Score and answers are hidden until publication.</div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)', marginBottom: '12px' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Score:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{totalScore} / {totalMarks}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)', marginBottom: '12px' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Time Taken:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{result?.timeTakenMinutes || 0} minutes</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Questions:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{correctAnswers} / {totalQuestions}</span>
-          </div>
-        </div>
+        ) : (
+          <>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                Test Details
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)', marginBottom: '12px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Score:</span>
+                <span style={{ color: 'var(--text-primary)' }}>{totalScore} / {totalMarks}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)', marginBottom: '12px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Time Taken:</span>
+                <span style={{ color: 'var(--text-primary)' }}>{result?.timeTakenMinutes || 0} minutes</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Questions:</span>
+                <span style={{ color: 'var(--text-primary)' }}>{correctAnswers} / {totalQuestions}</span>
+              </div>
+            </div>
+
+            {/* Per-question breakdown */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>Answers Breakdown</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {(result?.answers || []).map((ans, idx) => {
+                  const question = ans.question || ans.q || {};
+                  const qText = question.text || question.question || ans.questionText || `Question ${idx + 1}`;
+                  const options = question.options || ans.options || [];
+                  const selected = ans.selectedOption ?? ans.selected ?? ans.selectedIndex ?? ans.answer;
+                  const correct = ans.correctOption ?? ans.correct ?? ans.correctIndex ?? ans.correctAnswer;
+                  const isCorrect = !!(ans.isCorrect || (selected !== undefined && correct !== undefined && selected === correct));
+
+                  return (
+                    <div key={idx} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px' }}>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>{idx + 1}. {qText}</div>
+
+                      {/* Options list */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {options.length > 0 ? options.map((opt, i) => {
+                          const label = typeof opt === 'string' ? opt : (opt.text || opt.label || String(opt));
+                          const isThisCorrect = (i === correct) || (String(opt.id) === String(correct)) || (String(opt.value) === String(correct));
+                          const isThisSelected = (i === selected) || (String(opt.id) === String(selected)) || (String(opt.value) === String(selected));
+
+                          const background = isThisCorrect ? 'rgba(34,197,94,0.06)' : isThisSelected && !isThisCorrect ? 'rgba(239,68,68,0.04)' : 'var(--bg-card)';
+
+                          return (
+                            <div key={i} style={{ padding: '10px 12px', borderRadius: '8px', border: `1px solid ${isThisCorrect ? 'rgba(34,197,94,0.12)' : 'transparent'}`, background }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ color: 'var(--text-primary)' }}>{label}</div>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: isThisCorrect ? '#16a34a' : isThisSelected ? '#ef4444' : 'var(--text-secondary)' }}>
+                                  {isThisCorrect ? 'Correct' : isThisSelected ? 'Your answer' : ''}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }) : (
+                          <div style={{ color: 'var(--text-secondary)' }}>No options available</div>
+                        )}
+                      </div>
+
+                      {/* Verdict */}
+                      <div style={{ marginTop: '10px', fontSize: '0.9rem', color: isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}>
+                        {isCorrect ? 'Correct' : 'Incorrect'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '12px' }}>

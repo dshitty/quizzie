@@ -7,6 +7,7 @@ import API from '@/services/api';
 export default function ExamPage() {
   const params = useParams();
   const examId = params.id;
+
   const [current, setCurrent] = useState(0);
   const [exam, setExam] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);

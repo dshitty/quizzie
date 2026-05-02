@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function CreateExamPage() {
+  const router = useRouter();
+
   const [formData, setFormData] = useState({
     title: '',
     subject: '',
@@ -26,8 +28,6 @@ export default function CreateExamPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const router = useRouter();
-
   const [durationInput, setDurationInput] = useState(String(60));
 
   const handleChange = (e) => {

@@ -89,7 +89,7 @@ export default function Login() {
 
         {/* Sign Up Link */}
         <div style={{ marginTop: '28px', textAlign: 'center', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/register" style={{ color: 'var(--accent)', fontWeight: '700', textDecoration: 'none' }}>
             Sign up
           </Link>
