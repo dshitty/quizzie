@@ -20,6 +20,10 @@ exports.protect = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'User no longer exists' });
     }
+    // Immediately block users who are deactivated
+    if (req.user.isActive === false) {
+      return res.status(403).json({ success: false, message: 'Account is deactivated' });
+    }
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Token invalid or expired' });

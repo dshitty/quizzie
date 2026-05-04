@@ -735,3 +735,11 @@ export default function EditExamPage() {
     </div>
   );
 }
+
+export default function EditExamPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <EditExamPageContent />
+    </ProtectedRoute>
+  );
+}

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import API from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -13,12 +14,23 @@ export default function RegisterPage() {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      const redirectPath = user.role === 'admin' ? '/admin' : '/dashboard';
+      router.push(redirectPath);
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     if (form.password !== form.confirmPassword) {
@@ -28,12 +40,15 @@ export default function RegisterPage() {
     }
 
     try {
-      await API.post('/api/auth/register', {
+      const { data } = await API.post('/api/auth/register', {
         name: form.name,
         email: form.email,
         password: form.password,
       });
-      router.push('/login');
+      setSuccess(data.message || 'Account created! Please wait for admin approval.');
+      setForm({ name: '', email: '', password: '', confirmPassword: '' });
+      // Redirect to login after 3 seconds
+      setTimeout(() => router.push('/login'), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -59,6 +74,24 @@ export default function RegisterPage() {
 
         {/* Error Message */}
         {error && <div className="auth-error" style={{ display: 'block', marginBottom: '24px' }}>{error}</div>}
+
+        {/* Success Message */}
+        {success && (
+          <div style={{
+            display: 'block',
+            marginBottom: '24px',
+            background: 'rgba(74, 222, 128, 0.12)',
+            border: '1px solid rgba(74, 222, 128, 0.3)',
+            borderRadius: 'var(--radius-md)',
+            color: '#4ade80',
+            padding: '12px 16px',
+            textAlign: 'center',
+            fontSize: '0.95rem',
+          }}>
+            ✅ {success}
+            <div style={{ fontSize: '0.8rem', marginTop: '8px', opacity: 0.8 }}>Redirecting to login...</div>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit}>

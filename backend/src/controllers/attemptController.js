@@ -136,13 +136,19 @@ exports.getMyAttempts = async (req, res, next) => {
   }
 };
 
-// GET /api/attempts/result/:examId  — Student views result (auto-published immediately after scoring)
+// GET /api/attempts/result/:id  — Student views result by attemptId (auto-published immediately after scoring)
 exports.getMyResult = async (req, res, next) => {
   try {
-    const attempt = await Attempt.findOne({ student: req.user._id, exam: req.params.examId })
+    const attempt = await Attempt.findById(req.params.id)
       .populate('exam', 'title subject questions totalMarks passingMarks');
 
     if (!attempt) return res.status(404).json({ success: false, message: 'No attempt found' });
+    
+    // Verify the attempt belongs to the logged-in student
+    if (attempt.student.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    
     if (!attempt.resultPublished) {
       return res.status(403).json({ success: false, message: 'Result not available yet. Please submit your exam first.' });
     }
@@ -173,10 +179,20 @@ exports.releaseResult = async (req, res, next) => {
     const attempt = await Attempt.findById(req.params.attemptId);
     if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
 
+    await Attempt.updateOne(
+      { _id: attempt._id },
+      {
+        $set: {
+          resultReleased: true,
+          releasedAt: new Date(),
+          releasedBy: req.user._id,
+        },
+      }
+    );
+
     attempt.resultReleased = true;
-    attempt.releasedAt     = new Date();
-    attempt.releasedBy     = req.user._id;
-    await attempt.save();
+    attempt.releasedAt = new Date();
+    attempt.releasedBy = req.user._id;
 
     res.status(200).json({ success: true, message: 'Result released to student', data: attempt });
   } catch (err) {
@@ -185,13 +201,27 @@ exports.releaseResult = async (req, res, next) => {
 };
 
 // PATCH /api/attempts/release-all/:examId  — Admin releases ALL results for an exam at once
+// PATCH /api/attempts/release-all           — Admin releases all pending results across exams
 exports.releaseAllResults = async (req, res, next) => {
   try {
-    const result = await Attempt.updateMany(
-      { exam: req.params.examId, isSubmitted: true, resultReleased: false },
-      { resultReleased: true, releasedAt: new Date(), releasedBy: req.user._id }
-    );
-    res.status(200).json({ success: true, message: `Released ${result.modifiedCount} results`, data: result });
+    const filter = req.params.examId
+      ? { exam: req.params.examId, isSubmitted: true, resultReleased: false }
+      : { isSubmitted: true, resultReleased: false };
+
+    const result = await Attempt.updateMany(filter, {
+      $set: {
+        resultReleased: true,
+        releasedAt: new Date(),
+        releasedBy: req.user._id,
+      },
+    });
+
+    const scopeMessage = req.params.examId ? 'exam' : 'all exams';
+    res.status(200).json({
+      success: true,
+      message: `Released ${result.modifiedCount} results for ${scopeMessage}`,
+      data: result,
+    });
   } catch (err) {
     next(err);
   }

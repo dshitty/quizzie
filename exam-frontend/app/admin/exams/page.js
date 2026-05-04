@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useRouter } from 'next/navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import Link from 'next/link';
 
-export default function ManageExamsPage() {
+function ManageExamsPageContent() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -419,5 +420,13 @@ export default function ManageExamsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ManageExamsPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <ManageExamsPageContent />
+    </ProtectedRoute>
   );
 }

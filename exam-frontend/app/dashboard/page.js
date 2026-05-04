@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export default function Dashboard() {
+function DashboardContent() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { user, logout } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const now = new Date();
   const ongoingExams = exams.filter((exam) => new Date(exam.scheduledAt) <= now && new Date(exam.expiresAt) >= now);
   const upcomingExams = exams.filter((exam) => new Date(exam.scheduledAt) > now);
@@ -32,13 +33,20 @@ export default function Dashboard() {
 
         // Fetch student's attempts to calculate stats
         try {
+          const now = new Date();
           const { data: attemptsData } = await API.get('/api/attempts/my');
           const attempts = attemptsData.data || [];
           console.log('📋 Total attempts:', attempts.length);
+          const ongoingExamsForStats = exams.filter((exam) => new Date(exam.scheduledAt) <= now && new Date(exam.expiresAt) >= now);
           
-          // Count completed tests (submitted attempts)
-          const completed = attempts.filter(a => a.isSubmitted).length;
-          console.log('✅ Completed tests:', completed);
+          // Count completed exams by unique exam id, not by total attempts
+          const completedExamIds = new Set(
+            attempts
+              .filter((a) => a.isSubmitted && a.exam?._id)
+              .map((a) => a.exam._id.toString())
+          );
+          const completed = completedExamIds.size;
+          console.log('✅ Completed exams:', completed);
           
           // Calculate average score
           const submittedAttempts = attempts.filter(a => a.isSubmitted && a.percentage !== undefined);
@@ -46,9 +54,9 @@ export default function Dashboard() {
             ? Math.round(submittedAttempts.reduce((sum, a) => sum + a.percentage, 0) / submittedAttempts.length)
             : 0;
           
-          // Available tests = current available exams minus completed ones (never negative)
-          const availableTests = Math.max(0, exams.length - completed);
-          console.log('🎯 Available tests:', availableTests, '(', exams.length, '-', completed, ')');
+          // Available tests = ongoing exams that this student has not already submitted
+                    const availableTests = ongoingExamsForStats.filter((exam) => !completedExamIds.has(exam._id.toString())).length;
+                    console.log('🎯 Available tests:', availableTests, '(', ongoingExamsForStats.length, 'ongoing,', completed, 'completed exams)');
 
           setStats({
             total: availableTests,
@@ -127,7 +135,7 @@ export default function Dashboard() {
         {/* Page header with greeting */}
         <div style={{ marginBottom: '32px' }}>
           <div style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
-            👋 Welcome back, {user?.name || 'Student'}!
+            👋 Welcome back, {authLoading ? '...' : user?.name || 'Student'}!
           </div>
           <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
             Here&apos;s what&apos;s happening today
@@ -287,5 +295,13 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute requiredRole="student">
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

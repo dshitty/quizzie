@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -460,5 +461,13 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <ProtectedRoute requiredRole="student">
+      <ProfilePageContent />
+    </ProtectedRoute>
   );
 }

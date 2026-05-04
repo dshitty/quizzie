@@ -15,9 +15,9 @@ const { protect, adminOnly } = require('../middleware/Auth');
 router.post('/start/:examId',           protect, startAttempt);
 router.post('/submit/:examId',          protect, submitAttempt);
 router.get('/my',                       protect, getMyAttempts);
-router.get('/result/:examId',           protect, getMyResult);
+router.get('/result/:id',               protect, getMyResult);
 
-// Admin routes - MUST BE BEFORE /:id routes to avoid conflict
+// Admin routes - MUST BE AFTER /result/:id to avoid conflict
 router.get('/',                         protect, adminOnly, async (req, res, next) => {
   try {
     const Attempt = require('../models/Attempt');
@@ -33,6 +33,7 @@ router.get('/',                         protect, adminOnly, async (req, res, nex
 
 router.get('/exam/:examId',             protect, adminOnly, getAttemptsByExam);
 router.put('/:attemptId/release',       protect, adminOnly, releaseResult);
+router.patch('/release-all',            protect, adminOnly, releaseAllResults);
 router.patch('/release-all/:examId',    protect, adminOnly, releaseAllResults);
 router.get('/stats/:examId',            protect, adminOnly, getExamStats);
 

@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useRouter } from 'next/navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import Link from 'next/link';
 
-export default function AttemptsPage() {
+function AttemptsPageContent() {
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bulkReleasing, setBulkReleasing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [filter, setFilter] = useState('pending'); // 'pending', 'released', 'all'
@@ -40,6 +42,31 @@ export default function AttemptsPage() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Failed to release result');
+    }
+  };
+
+  const handleReleaseAllResults = async () => {
+    try {
+      setBulkReleasing(true);
+      setError('');
+
+      const pendingCount = attempts.filter((attempt) => !attempt.resultReleased).length;
+      const { data } = await API.patch('/api/attempts/release-all');
+
+      setAttempts((prev) =>
+        prev.map((attempt) =>
+          attempt.resultReleased
+            ? attempt
+            : { ...attempt, resultReleased: true, releasedAt: new Date() }
+        )
+      );
+
+      setSuccess(data.message || `Released ${pendingCount} results`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to release all results');
+    } finally {
+      setBulkReleasing(false);
     }
   };
 
@@ -107,8 +134,39 @@ export default function AttemptsPage() {
           <div style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: 'var(--text-primary)' }}>
             ✍️ Review Student Attempts
           </div>
-          <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-            Approve and release results to students
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+              Approve and release results to students
+            </div>
+            <button
+              type="button"
+              onClick={handleReleaseAllResults}
+              disabled={bulkReleasing || attempts.every((attempt) => attempt.resultReleased)}
+              style={{
+                background: bulkReleasing || attempts.every((attempt) => attempt.resultReleased)
+                  ? 'rgba(148,163,184,0.12)'
+                  : 'var(--accent)',
+                color: bulkReleasing || attempts.every((attempt) => attempt.resultReleased)
+                  ? 'var(--text-secondary)'
+                  : '#fff',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: 'var(--radius-md)',
+                cursor: bulkReleasing || attempts.every((attempt) => attempt.resultReleased)
+                  ? 'not-allowed'
+                  : 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '700',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {bulkReleasing
+                ? 'Releasing All...'
+                : attempts.every((attempt) => attempt.resultReleased)
+                  ? 'All Results Released'
+                  : 'Release All Pending Results'}
+            </button>
           </div>
         </div>
 
@@ -328,5 +386,13 @@ export default function AttemptsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AttemptsPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <AttemptsPageContent />
+    </ProtectedRoute>
   );
 }

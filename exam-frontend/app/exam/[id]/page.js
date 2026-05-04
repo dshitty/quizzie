@@ -13,6 +13,8 @@ export default function ExamPage() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,18 +22,23 @@ export default function ExamPage() {
 
   const handleSubmit = useCallback(async () => {
     try {
-      // Convert answers object to array format expected by backend
-      const answersArray = questions.map(q => ({
+      setSubmitting(true);
+      const answersArray = questions.map((q) => ({
         questionId: q._id,
         selectedOption: answers[q._id] || null,
       }));
-      
+
       await API.post(`/api/attempts/submit/${examId}`, {
         answers: answersArray,
       });
-      window.location.href = `/result/${examId}`;
+
+      setSubmitted(true);
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 2000);
     } catch (err) {
       console.error('Failed to submit:', err);
+      setSubmitting(false);
     }
   }, [answers, examId, questions]);
 
@@ -42,10 +49,8 @@ export default function ExamPage() {
         setExam(data.data);
         setTimeLeft(data.data.durationMinutes * 60);
 
-        // Try to start the attempt
         try {
           const attemptRes = await API.post(`/api/attempts/start/${examId}`);
-          // Check if the attempt is already submitted
           if (attemptRes.data.data.isSubmitted) {
             setAlreadySubmitted(true);
           }
@@ -66,8 +71,11 @@ export default function ExamPage() {
   useEffect(() => {
     if (timeLeft === null) return;
     if (timeLeft <= 0) {
-      handleSubmit();
-      return;
+      const timeoutId = setTimeout(() => {
+        handleSubmit();
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }
 
     const timer = setInterval(() => {
@@ -119,6 +127,26 @@ export default function ExamPage() {
           </p>
           <a href="/dashboard" style={{ display: 'inline-block', padding: '12px 32px', background: 'var(--accent)', color: '#fff', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: '600' }}>
             Back to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-base)', padding: '32px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '48px 32px', maxWidth: '500px', textAlign: 'center' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '24px', animation: 'scale-in 0.5s ease-out' }}>✅</div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Submitted Successfully!</h2>
+          <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+            Your exam has been submitted.
+          </p>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '32px' }}>
+            Redirecting to dashboard in a moment...
+          </p>
+          <a href="/dashboard" style={{ display: 'inline-block', padding: '12px 32px', background: 'var(--accent)', color: '#fff', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: '600', cursor: 'pointer' }}>
+            Go to Dashboard
           </a>
         </div>
       </div>
@@ -221,7 +249,7 @@ export default function ExamPage() {
         {questions[current] && (
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px', flex: 1, maxWidth: '800px' }}>
             <h2 style={{ fontSize: '1.15rem', fontWeight: '600', marginBottom: '24px', color: 'var(--text-primary)' }}>
-              {questions[current].text}
+              {questions[current].questionText || questions[current].text || questions[current].question || `Question ${current + 1}`}
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -270,7 +298,7 @@ export default function ExamPage() {
                   padding: '12px 24px',
                   borderRadius: 'var(--radius-md)',
                   background: current === 0 ? 'var(--bg-hover)' : 'var(--bg-card)',
-                  border: `1px solid var(--border)`,
+                  border: '1px solid var(--border)',
                   color: 'var(--text-secondary)',
                   cursor: current === 0 ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s',
@@ -286,7 +314,7 @@ export default function ExamPage() {
                   padding: '12px 24px',
                   borderRadius: 'var(--radius-md)',
                   background: current === questions.length - 1 ? 'var(--bg-hover)' : 'var(--bg-card)',
-                  border: `1px solid var(--border)`,
+                  border: '1px solid var(--border)',
                   color: 'var(--text-secondary)',
                   cursor: current === questions.length - 1 ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s',
@@ -298,10 +326,11 @@ export default function ExamPage() {
 
               <button
                 onClick={handleSubmit}
+                disabled={submitting}
                 className="btn-primary"
-                style={{ padding: '12px 32px' }}
+                style={{ padding: '12px 32px', opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
               >
-                Submit Test
+                {submitting ? 'Submitting...' : 'Submit Test'}
               </button>
             </div>
           </div>

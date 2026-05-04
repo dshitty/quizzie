@@ -191,12 +191,13 @@ export default function ResultPage() {
               <div style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>Answers Breakdown</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {(result?.answers || []).map((ans, idx) => {
-                  const question = ans.question || ans.q || {};
-                  const qText = question.text || question.question || ans.questionText || `Question ${idx + 1}`;
-                  const options = question.options || ans.options || [];
-                  const selected = ans.selectedOption ?? ans.selected ?? ans.selectedIndex ?? ans.answer;
-                  const correct = ans.correctOption ?? ans.correct ?? ans.correctIndex ?? ans.correctAnswer;
-                  const isCorrect = !!(ans.isCorrect || (selected !== undefined && correct !== undefined && selected === correct));
+                  // Find the question from exam.questions by matching questionId
+                  const question = (result?.exam?.questions || []).find(q => q._id === ans.questionId) || {};
+                  const qText = question.text || question.question || `Question ${idx + 1}`;
+                  const options = question.options || [];
+                  const selected = ans.selectedOption;
+                  const correct = question.correctOption;
+                  const isCorrect = ans.isCorrect;
 
                   return (
                     <div key={idx} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px' }}>
@@ -205,18 +206,19 @@ export default function ResultPage() {
                       {/* Options list */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {options.length > 0 ? options.map((opt, i) => {
+                          const optionLetter = String.fromCharCode(65 + i); // A, B, C, D
                           const label = typeof opt === 'string' ? opt : (opt.text || opt.label || String(opt));
-                          const isThisCorrect = (i === correct) || (String(opt.id) === String(correct)) || (String(opt.value) === String(correct));
-                          const isThisSelected = (i === selected) || (String(opt.id) === String(selected)) || (String(opt.value) === String(selected));
+                          const isThisCorrect = optionLetter === correct;
+                          const isThisSelected = optionLetter === selected;
 
                           const background = isThisCorrect ? 'rgba(34,197,94,0.06)' : isThisSelected && !isThisCorrect ? 'rgba(239,68,68,0.04)' : 'var(--bg-card)';
 
                           return (
                             <div key={i} style={{ padding: '10px 12px', borderRadius: '8px', border: `1px solid ${isThisCorrect ? 'rgba(34,197,94,0.12)' : 'transparent'}`, background }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ color: 'var(--text-primary)' }}>{label}</div>
+                                <div style={{ color: 'var(--text-primary)' }}>{optionLetter}. {label}</div>
                                 <div style={{ fontSize: '0.78rem', fontWeight: 700, color: isThisCorrect ? '#16a34a' : isThisSelected ? '#ef4444' : 'var(--text-secondary)' }}>
-                                  {isThisCorrect ? 'Correct' : isThisSelected ? 'Your answer' : ''}
+                                  {isThisCorrect ? '✓ Correct' : isThisSelected ? '✗ Your answer' : ''}
                                 </div>
                               </div>
                             </div>
@@ -228,7 +230,7 @@ export default function ResultPage() {
 
                       {/* Verdict */}
                       <div style={{ marginTop: '10px', fontSize: '0.9rem', color: isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}>
-                        {isCorrect ? 'Correct' : 'Incorrect'}
+                        {isCorrect ? '✓ Correct' : '✗ Incorrect'}
                       </div>
                     </div>
                   );

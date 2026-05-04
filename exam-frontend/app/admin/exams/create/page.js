@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function CreateExamPage() {
   const router = useRouter();
+  const draftKey = 'exampulse:create-exam-draft';
 
   const [formData, setFormData] = useState({
     title: '',
@@ -22,13 +23,70 @@ export default function CreateExamPage() {
     questionText: '',
     options: ['', '', '', ''],
     correctOption: 'A',
-    marks: 1,
+     marks: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [durationInput, setDurationInput] = useState(String(60));
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+
+        if (draft.formData) {
+          setFormData((prev) => ({ ...prev, ...draft.formData }));
+        }
+        if (Array.isArray(draft.questions)) {
+          setQuestions(draft.questions);
+        }
+        if (draft.newQuestion) {
+          setNewQuestion((prev) => ({
+            ...prev,
+            ...draft.newQuestion,
+            options: Array.isArray(draft.newQuestion.options) ? draft.newQuestion.options : prev.options,
+          }));
+        }
+        if (draft.durationInput !== undefined && draft.durationInput !== null) {
+          setDurationInput(String(draft.durationInput));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to restore exam draft:', err);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          formData,
+          questions,
+          newQuestion,
+          durationInput,
+        })
+      );
+    } catch (err) {
+      console.error('Failed to save exam draft:', err);
+    }
+  }, [draftLoaded, draftKey, durationInput, formData, newQuestion, questions]);
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch (err) {
+      console.error('Failed to clear exam draft:', err);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -100,6 +158,7 @@ export default function CreateExamPage() {
         questions: questions,
       });
 
+      clearDraft();
       setSuccess('Exam created successfully! Redirecting...');
       setTimeout(() => {
         router.push(`/admin/exams/${data.data._id}/edit`);
@@ -123,13 +182,14 @@ export default function CreateExamPage() {
 
     // Transform options to the correct format: { label, text }
     const formattedQuestion = {
+      questionNumber: questions.length + 1,
       questionText: newQuestion.questionText,
       options: newQuestion.options.map((text, idx) => ({
         label: ['A', 'B', 'C', 'D'][idx],
         text: text
       })),
       correctOption: newQuestion.correctOption,
-      marks: newQuestion.marks,
+      marks: Number(newQuestion.marks) || 1,
     };
 
     setQuestions([...questions, formattedQuestion]);
@@ -137,13 +197,20 @@ export default function CreateExamPage() {
       questionText: '',
       options: ['', '', '', ''],
       correctOption: 'A',
-      marks: 1,
+        marks: '',
     });
     setError('');
   };
 
   const removeQuestion = (index) => {
-    setQuestions(questions.filter((_, i) => i !== index));
+    setQuestions(
+      questions
+        .filter((_, i) => i !== index)
+        .map((question, i) => ({
+          ...question,
+          questionNumber: i + 1,
+        }))
+    );
   };
 
   return (
@@ -601,8 +668,10 @@ export default function CreateExamPage() {
                     <input
                       type="number"
                       min="1"
+                      step="1"
+                      placeholder="Enter marks"
                       value={newQuestion.marks}
-                      onChange={(e) => setNewQuestion({ ...newQuestion, marks: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, marks: e.target.value })}
                       style={{
                         width: '100%',
                         background: 'var(--bg-input)',
@@ -643,7 +712,7 @@ export default function CreateExamPage() {
                     <div key={idx} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                         <div style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                          Q{idx + 1}. {q.questionText}
+                          Q{q.questionNumber || idx + 1}. {q.questionText}
                         </div>
                         <button
                           type="button"
@@ -738,5 +807,13 @@ export default function CreateExamPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreateExamPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <CreateExamPageContent />
+    </ProtectedRoute>
   );
 }

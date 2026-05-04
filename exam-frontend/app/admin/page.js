@@ -5,8 +5,9 @@ import API from '@/services/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const [stats, setStats] = useState({
     totalExams: 0,
     totalStudents: 0,
@@ -463,11 +464,47 @@ export default function AdminDashboard() {
                     📊 Release Results
                   </button>
                 </Link>
+
+                <Link href="/admin/students">
+                  <button
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border-accent)';
+                      e.currentTarget.style.color = 'var(--accent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                    }}
+                  >
+                    👥 Manage Students
+                  </button>
+                </Link>
               </div>
             </div>
           </>
         )}
       </div>
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <AdminDashboardContent />
+    </ProtectedRoute>
   );
 }

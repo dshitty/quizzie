@@ -25,8 +25,18 @@ const sendToken = (user, statusCode, res) => {
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
-    const user = await User.create({ name, email, password, role:"student", isActive: true });
-    sendToken(user, 201, res);
+    const user = await User.create({ name, email, password, role:"student", isActive: false });
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully. Please wait for admin approval to activate your account.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -48,7 +58,7 @@ exports.login = async (req, res, next) => {
     }
 
     if (!user.isActive) {
-      return res.status(403).json({ success: false, message: 'Account is deactivated' });
+      return res.status(403).json({ success: false, message: 'Account is deactivated. Please wait for admin approval.' });
     }
 
     sendToken(user, 200, res);

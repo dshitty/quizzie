@@ -493,3 +493,11 @@ export default function ExamStatsPage() {
     </div>
   );
 }
+
+export default function ExamStatsPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <ExamStatsPageContent />
+    </ProtectedRoute>
+  );
+}

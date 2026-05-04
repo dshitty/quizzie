@@ -19,6 +19,7 @@ app.use(morgan('dev'));                // Log every request in dev
 
 // ── Routes ──────────────────────────────────────────────────
 app.use('/api/auth',     require('../src/routes/authRoutes'));
+app.use('/api/users',    require('../src/routes/userRoutes'));
 app.use('/api/exams',    require('../src/routes/examRoutes'));
 app.use('/api/attempts', require('../src/routes/attemptRoutes'));
 
