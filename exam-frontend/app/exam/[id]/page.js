@@ -17,10 +17,11 @@ export default function ExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const questions = useMemo(() => exam?.questions || [], [exam?.questions]);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     try {
       setSubmitting(true);
       const answersArray = questions.map((q) => ({
@@ -72,7 +73,7 @@ export default function ExamPage() {
     if (timeLeft === null) return;
     if (timeLeft <= 0) {
       const timeoutId = setTimeout(() => {
-        handleSubmit();
+        handleSubmit(true); // Auto-submit, no popup
       }, 0);
 
       return () => clearTimeout(timeoutId);
@@ -256,27 +257,35 @@ export default function ExamPage() {
               {questions[current].options?.map((option, optIdx) => (
                 <button
                   key={optIdx}
+                  disabled={submitted}
                   onClick={() => {
-                    setAnswers({ ...answers, [questions[current]._id]: option.label });
+                    if (!submitted) {
+                      setAnswers({ ...answers, [questions[current]._id]: option.label });
+                    }
                   }}
                   style={{
                     textAlign: 'left',
                     padding: '14px 16px',
                     borderRadius: 'var(--radius-md)',
-                    background: answers[questions[current]._id] === option.label ? 'var(--accent-soft)' : 'var(--bg-hover)',
-                    border: answers[questions[current]._id] === option.label ? `2px solid var(--accent)` : `1px solid var(--border)`,
+                    background: submitted 
+                      ? 'var(--bg-hover)' 
+                      : answers[questions[current]._id] === option.label ? 'var(--accent-soft)' : 'var(--bg-hover)',
+                    border: submitted 
+                      ? `1px solid var(--border)` 
+                      : answers[questions[current]._id] === option.label ? `2px solid var(--accent)` : `1px solid var(--border)`,
                     color: 'var(--text-primary)',
-                    cursor: 'pointer',
+                    cursor: submitted ? 'not-allowed' : 'pointer',
+                    opacity: submitted ? 0.6 : 1,
                     transition: 'all 0.2s',
                     fontSize: '0.95rem',
                   }}
                   onMouseEnter={(e) => {
-                    if (answers[questions[current]._id] !== option.label) {
+                    if (!submitted && answers[questions[current]._id] !== option.label) {
                       e.target.style.background = 'var(--bg-card)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (answers[questions[current]._id] !== option.label) {
+                    if (!submitted && answers[questions[current]._id] !== option.label) {
                       e.target.style.background = 'var(--bg-hover)';
                     }
                   }}
@@ -325,7 +334,7 @@ export default function ExamPage() {
               </button>
 
               <button
-                onClick={handleSubmit}
+                onClick={() => setShowSubmitModal(true)}
                 disabled={submitting}
                 className="btn-primary"
                 style={{ padding: '12px 32px', opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
@@ -336,6 +345,92 @@ export default function ExamPage() {
           </div>
         )}
       </div>
+
+      {/* Submit Confirmation Modal */}
+      {showSubmitModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '32px',
+            maxWidth: '400px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>⚠️</div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>
+              Submit Your Exam?
+            </h2>
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
+              Once you submit, you will not be able to edit your answers. Are you sure you want to submit now?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowSubmitModal(false)}
+                style={{
+                  background: 'var(--bg-hover)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)',
+                  padding: '10px 24px',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.borderColor = 'var(--border-accent)';
+                  e.target.style.color = 'var(--accent)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.borderColor = 'var(--border)';
+                  e.target.style.color = 'var(--text-secondary)';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowSubmitModal(false);
+                  handleSubmit(false); // Manual submit, not auto
+                }}
+                disabled={submitting}
+                style={{
+                  background: 'var(--accent)',
+                  color: '#fff',
+                  padding: '10px 24px',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  border: 'none',
+                  opacity: submitting ? 0.7 : 1,
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (!submitting) e.target.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  if (!submitting) e.target.style.opacity = '1';
+                }}
+              >
+                {submitting ? 'Submitting...' : 'Yes, Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

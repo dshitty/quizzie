@@ -40,11 +40,16 @@ function AdminDashboardContent() {
 
         // Calculate stats
         const pendingCount = allAttempts.filter(a => !a.resultReleased).length;
+        
+        // Count unique exams that have unreleased results
+        const examsWithUnreleasedResults = new Set(
+          allAttempts.filter(a => !a.resultReleased && a.exam?._id).map(a => a.exam._id.toString())
+        ).size;
 
         setStats({
           totalExams: examsRes.data.data?.length || 0,
           totalStudents,
-          totalAttempts: allAttempts.length,
+          totalAttempts: examsWithUnreleasedResults,
           pendingResults: pendingCount,
         });
       } catch (err) {
@@ -230,13 +235,13 @@ function AdminDashboardContent() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <div style={{ fontSize: '2rem' }}>✍️</div>
+                  <div style={{ fontSize: '2rem' }}>📋</div>
                 </div>
                 <div style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text-primary)' }}>
                   {stats.totalAttempts}
                 </div>
                 <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-                  Total Attempts
+                  Exams with Unreleased Results
                 </div>
               </div>
 

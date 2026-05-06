@@ -8,18 +8,29 @@ import Link from 'next/link';
 
 function AttemptsPageContent() {
   const [attempts, setAttempts] = useState([]);
+  const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bulkReleasing, setBulkReleasing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [filter, setFilter] = useState('pending'); // 'pending', 'released', 'all'
+  const [selectedExamId, setSelectedExamId] = useState(''); // Exam selection
   const router = useRouter();
 
   useEffect(() => {
-    const fetchAttempts = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await API.get('/api/attempts');
-        setAttempts(data.data || []);
+        const [attemptsRes, examsRes] = await Promise.all([
+          API.get('/api/attempts'),
+          API.get('/api/exams'),
+        ]);
+        setAttempts(attemptsRes.data.data || []);
+        setExams(examsRes.data.data || []);
+        
+        // Set first exam as selected by default
+        if (examsRes.data.data && examsRes.data.data.length > 0) {
+          setSelectedExamId(examsRes.data.data[0]._id);
+        }
       } catch (err) {
         setError('Failed to load attempts');
         console.error(err);
@@ -27,7 +38,7 @@ function AttemptsPageContent() {
         setLoading(false);
       }
     };
-    fetchAttempts();
+    fetchData();
   }, []);
 
   const handleReleaseResult = async (attemptId) => {
@@ -70,11 +81,13 @@ function AttemptsPageContent() {
     }
   };
 
-  const filteredAttempts = attempts.filter((a) => {
-    if (filter === 'pending') return !a.resultReleased;
-    if (filter === 'released') return a.resultReleased;
-    return true;
-  });
+  const filteredAttempts = attempts
+    .filter((a) => selectedExamId ? a.exam?._id?.toString() === selectedExamId : true)
+    .filter((a) => {
+      if (filter === 'pending') return !a.resultReleased;
+      if (filter === 'released') return a.resultReleased;
+      return true;
+    });
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -131,9 +144,39 @@ function AttemptsPageContent() {
       <div style={{ padding: '32px 24px', maxWidth: '1200px', margin: '0 auto' }}>
         {/* Page header */}
         <div style={{ marginBottom: '32px' }}>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
             ✍️ Review Student Attempts
           </div>
+          
+          {/* Exam Selection Dropdown */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '600' }}>
+              Select Exam to Review
+            </label>
+            <select
+              value={selectedExamId}
+              onChange={(e) => setSelectedExamId(e.target.value)}
+              style={{
+                width: '100%',
+                maxWidth: '400px',
+                padding: '10px 12px',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-base)',
+                color: 'var(--text-primary)',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="">All Exams</option>
+              {exams.map((exam) => (
+                <option key={exam._id} value={exam._id}>
+                  {exam.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
               Approve and release results to students

@@ -11,12 +11,17 @@ function AdminResultsPageContent() {
   const [actionId, setActionId] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [totalStudents, setTotalStudents] = useState(0);
 
   useEffect(() => {
-    const fetchAttempts = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await API.get('/api/attempts');
-        setAttempts(data.data || []);
+        const [attemptsRes, studentsRes] = await Promise.all([
+          API.get('/api/attempts'),
+          API.get('/api/auth/students/count'),
+        ]);
+        setAttempts(attemptsRes.data.data || []);
+        setTotalStudents(studentsRes.data.count || 0);
       } catch (err) {
         console.error('Failed to load attempts:', err);
         setError('Failed to load release data');
@@ -25,7 +30,7 @@ function AdminResultsPageContent() {
       }
     };
 
-    fetchAttempts();
+    fetchData();
   }, []);
 
   const examGroups = useMemo(() => {
@@ -42,9 +47,13 @@ function AdminResultsPageContent() {
         totalAttempts: 0,
         pendingCount: 0,
         releasedCount: 0,
+        studentIds: new Set(),
       };
 
       current.totalAttempts += 1;
+      if (attempt.student?._id) {
+        current.studentIds.add(attempt.student._id.toString());
+      }
       if (attempt.resultReleased) {
         current.releasedCount += 1;
       } else {
@@ -54,7 +63,11 @@ function AdminResultsPageContent() {
       groups.set(examId, current);
     }
 
-    return Array.from(groups.values()).sort((a, b) => a.title.localeCompare(b.title));
+    return Array.from(groups.values()).sort((a, b) => a.title.localeCompare(b.title)).map(group => ({
+      ...group,
+      participantCount: group.studentIds.size,
+      studentIds: undefined, // Don't include this in return
+    }));
   }, [attempts]);
 
   const handleReleaseAll = async (examId, title) => {
@@ -190,13 +203,12 @@ function AdminResultsPageContent() {
                     {exam.title}
                   </div>
                   <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    {exam.pendingCount} pending, {exam.releasedCount} released
+                    {exam.participantCount} of {totalStudents} students participated
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Total submissions</span>
-                  <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{exam.totalAttempts}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Status: {exam.releasedCount} released, {exam.pendingCount} pending</span>
                 </div>
 
                 <button

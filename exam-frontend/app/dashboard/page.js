@@ -48,10 +48,10 @@ function DashboardContent() {
           const completed = completedExamIds.size;
           console.log('✅ Completed exams:', completed);
           
-          // Calculate average score
-          const submittedAttempts = attempts.filter(a => a.isSubmitted && a.percentage !== undefined);
-          const avgScore = submittedAttempts.length > 0
-            ? Math.round(submittedAttempts.reduce((sum, a) => sum + a.percentage, 0) / submittedAttempts.length)
+          // Calculate average score - ONLY from released results
+          const releasedAttempts = attempts.filter(a => a.isSubmitted && a.resultReleased && a.percentage !== undefined);
+          const avgScore = releasedAttempts.length > 0
+            ? Math.round(releasedAttempts.reduce((sum, a) => sum + a.percentage, 0) / releasedAttempts.length)
             : 0;
           
           // Available tests = ongoing exams that this student has not already submitted
