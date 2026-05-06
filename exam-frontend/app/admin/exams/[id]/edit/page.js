@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const toLocalDateTimeInputValue = (dateValue) => {
   const d = new Date(dateValue);
@@ -15,7 +16,7 @@ const toLocalDateTimeInputValue = (dateValue) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-export default function EditExamPage() {
+function EditExamPageContent() {
   const params = useParams();
   const examId = params.id;
   const router = useRouter();

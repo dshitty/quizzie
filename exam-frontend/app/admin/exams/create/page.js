@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-export default function CreateExamPage() {
+function CreateExamPageContent() {
   const router = useRouter();
   const draftKey = 'exampulse:create-exam-draft';
 

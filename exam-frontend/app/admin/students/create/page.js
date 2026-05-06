@@ -4,8 +4,9 @@ import { useState } from 'react';
 import API from '@/services/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-export default function CreateStudentPage() {
+function CreateStudentPageContent() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',

@@ -42,10 +42,6 @@ export default function InstructionsPage() {
             </li>
             <li style={{ display: 'flex', gap: '12px', fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
               <span style={{ color: 'var(--accent)', fontWeight: '600', minWidth: '20px' }}>✓</span>
-              <span>Each question carries <strong style={{ color: 'var(--text-primary)' }}>equal marks</strong>. Answer all questions to maximize your score.</span>
-            </li>
-            <li style={{ display: 'flex', gap: '12px', fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-              <span style={{ color: 'var(--accent)', fontWeight: '600', minWidth: '20px' }}>✓</span>
               <span>The exam will <strong style={{ color: 'var(--text-primary)' }}>auto-submit</strong> when time runs out. Click submit if you finish early.</span>
             </li>
             <li style={{ display: 'flex', gap: '12px', fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>

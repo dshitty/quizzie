@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-export default function EditStudentPage() {
+function EditStudentPageContent() {
   const router = useRouter();
   const params = useParams();
   const studentId = params.id;

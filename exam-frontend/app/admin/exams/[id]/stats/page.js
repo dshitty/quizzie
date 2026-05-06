@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import API from '@/services/api';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-export default function ExamStatsPage() {
+function ExamStatsPageContent() {
   const params = useParams();
   const examId = params.id;
 

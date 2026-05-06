@@ -238,11 +238,3 @@ export default function AdminResultsPage() {
     </ProtectedRoute>
   );
 }
-
-export default function ResultsPage() {
-  return (
-    <ProtectedRoute requiredRole="admin">
-      <ResultsPageContent />
-    </ProtectedRoute>
-  );
-}
