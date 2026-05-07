@@ -25,6 +25,8 @@ app.use('/api/attempts', require('../src/routes/attemptRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }));
+app.get('/', (req, res) => res.send('Backend is running.'));
+
 
 // ── Global Error Handler ─────────────────────────────────────
 app.use(errorHandler);

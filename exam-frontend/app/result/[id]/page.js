@@ -13,6 +13,7 @@ export default function ResultPage() {
 
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -22,6 +23,7 @@ export default function ResultPage() {
         setResult(data.data);
       } catch (err) {
         console.error('Failed to load result:', err);
+        setError('Failed to load attempt details');
       } finally {
         setLoading(false);
       }
@@ -33,7 +35,40 @@ export default function ResultPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
-        <div style={{ color: 'var(--text-secondary)' }}>Loading results...</div>
+        <div style={{ color: 'var(--text-secondary)' }}>Loading attempt details...</div>
+      </div>
+    );
+  }
+
+  if (error || !result) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-base)', padding: '32px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '32px', maxWidth: '500px', textAlign: 'center' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>❌</div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>
+            Error Loading Attempt
+          </h2>
+          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+            {error || 'Could not load attempt details. Please try again.'}
+          </p>
+          <Link href={user?.role === 'admin' ? '/admin/attempts' : '/dashboard'}>
+            <button
+              style={{
+                display: 'inline-block',
+                padding: '12px 32px',
+                background: 'var(--accent)',
+                color: '#fff',
+                borderRadius: 'var(--radius-md)',
+                textDecoration: 'none',
+                fontWeight: '600',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              Back to {user?.role === 'admin' ? 'Attempts' : 'Dashboard'}
+            </button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -189,53 +224,78 @@ export default function ResultPage() {
             {/* Per-question breakdown */}
             <div style={{ marginBottom: '24px' }}>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>Answers Breakdown</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {(result?.answers || []).map((ans, idx) => {
-                  // Find the question from exam.questions by matching questionId
-                  const question = (result?.exam?.questions || []).find(q => q._id === ans.questionId) || {};
-                  const qText = question.text || question.question || `Question ${idx + 1}`;
-                  const options = question.options || [];
-                  const selected = ans.selectedOption;
-                  const correct = question.correctOption;
-                  const isCorrect = ans.isCorrect;
+              {(!result?.answers || result.answers.length === 0) ? (
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  No answer details available
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {(result?.answers || []).map((ans, idx) => {
+                    // Try to find question from exam.questions, or use basic answer data
+                    const question = (result?.exam?.questions || []).find(q => q._id === ans.questionId);
+                    const qText = question?.text || question?.question || question?.questionText || `Question ${idx + 1}`;
+                    const options = question?.options || [];
+                    const selected = ans.selectedOption;
+                    const correct = question?.correctOption || ans.correctOption;
+                    const isCorrect = ans.isCorrect;
+                    const selectedLabel = ans.selectedOptionLabel || selected;
 
-                  return (
-                    <div key={idx} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px' }}>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>{idx + 1}. {qText}</div>
+                    return (
+                      <div key={idx} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>
+                          Q{idx + 1}. {qText}
+                        </div>
 
-                      {/* Options list */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {options.length > 0 ? options.map((opt, i) => {
-                          const optionLetter = String.fromCharCode(65 + i); // A, B, C, D
-                          const label = typeof opt === 'string' ? opt : (opt.text || opt.label || String(opt));
-                          const isThisCorrect = optionLetter === correct;
-                          const isThisSelected = optionLetter === selected;
+                        {/* Options list */}
+                        {options.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                            {options.map((opt, i) => {
+                              const optionLetter = String.fromCharCode(65 + i); // A, B, C, D
+                              const label = typeof opt === 'string' ? opt : (opt.text || opt.label || String(opt));
+                              const isThisCorrect = optionLetter === correct;
+                              const isThisSelected = optionLetter === selected || optionLetter === selectedLabel;
 
-                          const background = isThisCorrect ? 'rgba(34,197,94,0.06)' : isThisSelected && !isThisCorrect ? 'rgba(239,68,68,0.04)' : 'var(--bg-card)';
+                              const background = isThisCorrect ? 'rgba(34,197,94,0.06)' : isThisSelected && !isThisCorrect ? 'rgba(239,68,68,0.04)' : 'var(--bg-base)';
+                              const borderColor = isThisCorrect ? 'rgba(34,197,94,0.2)' : isThisSelected && !isThisCorrect ? 'rgba(239,68,68,0.2)' : 'var(--border)';
 
-                          return (
-                            <div key={i} style={{ padding: '10px 12px', borderRadius: '8px', border: `1px solid ${isThisCorrect ? 'rgba(34,197,94,0.12)' : 'transparent'}`, background }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ color: 'var(--text-primary)' }}>{optionLetter}. {label}</div>
-                                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: isThisCorrect ? '#16a34a' : isThisSelected ? '#ef4444' : 'var(--text-secondary)' }}>
-                                  {isThisCorrect ? '✓ Correct' : isThisSelected ? '✗ Your answer' : ''}
+                              return (
+                                <div key={i} style={{ padding: '10px 12px', borderRadius: '8px', border: `1px solid ${borderColor}`, background }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                                      <span style={{ fontWeight: '700', marginRight: '8px' }}>{optionLetter}.</span>
+                                      {label}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: isThisCorrect ? '#16a34a' : isThisSelected && !isThisCorrect ? '#ef4444' : 'var(--text-muted)' }}>
+                                      {isThisCorrect ? '✓ Correct' : isThisSelected ? '✗ Selected' : ''}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        }) : (
-                          <div style={{ color: 'var(--text-secondary)' }}>No options available</div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                            <strong>Student's Answer:</strong> {selectedLabel || 'Not answered'}
+                          </div>
                         )}
-                      </div>
 
-                      {/* Verdict */}
-                      <div style={{ marginTop: '10px', fontSize: '0.9rem', color: isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}>
-                        {isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                        {/* Answer Status */}
+                        <div style={{ 
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          background: isCorrect ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          color: isCorrect ? '#16a34a' : '#ef4444',
+                          textAlign: 'center'
+                        }}>
+                          {isCorrect ? '✓ Correct Answer' : '✗ Incorrect Answer'}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </>
         )}

@@ -136,20 +136,25 @@ exports.getMyAttempts = async (req, res, next) => {
   }
 };
 
-// GET /api/attempts/result/:id  — Student views result by attemptId (auto-published immediately after scoring)
+// GET /api/attempts/result/:id  — Student/Admin views result by attemptId (auto-published immediately after scoring)
 exports.getMyResult = async (req, res, next) => {
   try {
     const attempt = await Attempt.findById(req.params.id)
-      .populate('exam', 'title subject questions totalMarks passingMarks');
+      .populate('exam')
+      .populate('student', 'name email studentId');
 
     if (!attempt) return res.status(404).json({ success: false, message: 'No attempt found' });
     
-    // Verify the attempt belongs to the logged-in student
-    if (attempt.student.toString() !== req.user._id.toString()) {
+    // Verify the attempt belongs to the logged-in student OR user is admin viewing attempt
+    const isOwner = attempt.student._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
     
-    if (!attempt.resultPublished) {
+    // For admin viewing unreleased results, allow viewing
+    if (!attempt.resultPublished && !isAdmin) {
       return res.status(403).json({ success: false, message: 'Result not available yet. Please submit your exam first.' });
     }
 
