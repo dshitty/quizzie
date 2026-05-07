@@ -4,7 +4,7 @@ const cors         = require('cors');
 const helmet       = require('helmet');
 const morgan       = require('morgan');
 const connectDB    = require('../src/config/db');
-const errorHandler = require('../src/middleware/errorHandler');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
