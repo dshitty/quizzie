@@ -302,3 +302,76 @@ img {
     transform: translateY(0);
   }
 }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  /* Auth */
+  .auth-card {
+    padding: 32px 24px;
+    max-width: 100%;
+  }
+
+  .auth-logo .logo-text {
+    font-size: 1.75rem;
+  }
+
+  /* Dashboard */
+  .page-title {
+    font-size: 1.35rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.88rem;
+  }
+
+  /* Stats Grid - Stack on mobile */
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-icon {
+    font-size: 1.75rem;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 1.35rem;
+  }
+
+  .stat-label {
+    font-size: 0.78rem;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+
+  /* Form */
+  .form-input {
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-label {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+
+  /* Exam card grid on mobile */
+  .exams-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

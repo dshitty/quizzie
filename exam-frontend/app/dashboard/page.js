@@ -94,14 +94,15 @@ function DashboardContent() {
         style={{
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border)',
-          padding: '16px 24px',
+          padding: '14px max(12px, 3vw)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: '16px',
         }}
       >
         <div>
-          <div style={{ fontSize: '1.35rem', fontWeight: '800' }}>
+          <div style={{ fontSize: 'clamp(1rem, 4vw, 1.35rem)', fontWeight: '800' }}>
             Exam<span style={{ color: 'var(--accent)' }}>Pulse</span>
           </div>
         </div>
@@ -111,11 +112,12 @@ function DashboardContent() {
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
             color: 'var(--text-secondary)',
-            padding: '8px 16px',
+            padding: '8px 14px',
             borderRadius: 'var(--radius-md)',
             cursor: 'pointer',
-            fontSize: '0.88rem',
+            fontSize: 'clamp(0.75rem, 2vw, 0.88rem)',
             transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
           }}
           onMouseEnter={(e) => {
             e.target.style.borderColor = 'var(--border-accent)';
@@ -131,13 +133,13 @@ function DashboardContent() {
       </div>
 
       {/* Main content */}
-      <div style={{ padding: '32px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ padding: 'max(16px, 5vw)', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
         {/* Page header with greeting */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontSize: 'clamp(1.35rem, 5vw, 2rem)', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
             👋 Welcome back, {authLoading ? '...' : user?.name || 'Student'}!
           </div>
-          <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 'clamp(0.85rem, 2.5vw, 0.95rem)', color: 'var(--text-secondary)' }}>
             Here&apos;s what&apos;s happening today
           </div>
         </div>
@@ -180,7 +182,7 @@ function DashboardContent() {
         {/* Exams section */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
           <div>
-            <div style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: 'clamp(1rem, 3vw, 1.25rem)', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               🟢 Ongoing Exams
             </div>
 
@@ -200,6 +202,7 @@ function DashboardContent() {
               </div>
             ) : (
               <div
+                className="exams-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',

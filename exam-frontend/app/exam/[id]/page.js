@@ -18,8 +18,22 @@ export default function ExamPage() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [error, setError] = useState('');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showQuestionNav, setShowQuestionNav] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   const questions = useMemo(() => exam?.questions || [], [exam?.questions]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setShowQuestionNav(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     try {
@@ -155,8 +169,9 @@ export default function ExamPage() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
-      {/* Left Sidebar - Questions Navigator */}
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)', flexDirection: isMobile ? 'column' : 'row' }}>
+      {/* Left Sidebar - Questions Navigator (Desktop) or Modal (Mobile) */}
+      {!isMobile && (
       <div
         style={{
           width: '280px',
@@ -200,23 +215,124 @@ export default function ExamPage() {
           <div style={{ color: 'var(--text-muted)' }}>● Unanswered</div>
         </div>
       </div>
+      )}
+
+      {/* Mobile Question Navigator Modal */}
+      {isMobile && showQuestionNav && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
+            zIndex: 999,
+          }}
+          onClick={() => setShowQuestionNav(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '280px',
+              background: 'var(--bg-surface)',
+              padding: '24px 16px',
+              overflowY: 'auto',
+              maxHeight: '100vh',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '0.82rem', fontWeight: '700', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              Questions
+              <button
+                onClick={() => setShowQuestionNav(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '24px' }}>
+              {questions.map((q, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setCurrent(i);
+                    setShowQuestionNav(false);
+                  }}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    background: current === i ? 'var(--accent)' : answers[q._id] ? 'var(--success)' : 'var(--bg-hover)',
+                    color: '#fff',
+                    fontSize: '0.88rem',
+                    fontWeight: '600',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
+              <div style={{ color: 'var(--accent)' }}>● Current</div>
+              <div style={{ color: 'var(--success)' }}>● Answered</div>
+              <div style={{ color: 'var(--text-muted)' }}>● Unanswered</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
-      <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, padding: isMobile ? '16px 12px' : '24px', display: 'flex', flexDirection: 'column' }}>
         {/* Top Bar */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '32px',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            marginBottom: isMobile ? '20px' : '32px',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '12px' : '0',
           }}
         >
+          {isMobile && (
+            <button
+              onClick={() => setShowQuestionNav(!showQuestionNav)}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                marginBottom: '8px',
+              }}
+            >
+              📋 Questions ({current + 1}/{questions.length})
+            </button>
+          )}
+          
           <div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+            <div style={{ fontSize: isMobile ? '0.75rem' : '0.82rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
               {exam?.title}
             </div>
-            <div style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: isMobile ? '1rem' : '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>
               Question {current + 1} of {questions.length}
             </div>
           </div>
@@ -226,17 +342,18 @@ export default function ExamPage() {
               background: 'var(--bg-card)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-md)',
-              padding: '12px 20px',
+              padding: isMobile ? '10px 14px' : '12px 20px',
               display: 'flex',
-              gap: '12px',
+              gap: isMobile ? '8px' : '12px',
               alignItems: 'center',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>⏱️ Time Left:</span>
+            <span style={{ fontSize: isMobile ? '0.7rem' : '0.82rem', color: 'var(--text-secondary)' }}>⏱️ Time:</span>
             <span
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '1.25rem',
+                fontSize: isMobile ? '1rem' : '1.25rem',
                 fontWeight: '700',
                 color: timeLeft < 300 ? 'var(--danger)' : 'var(--accent)',
               }}
@@ -248,12 +365,12 @@ export default function ExamPage() {
 
         {/* Question Card */}
         {questions[current] && (
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px', flex: 1, maxWidth: '800px' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: '600', marginBottom: '24px', color: 'var(--text-primary)' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: isMobile ? '16px' : '24px', flex: 1, maxWidth: isMobile ? 'none' : '800px' }}>
+            <h2 style={{ fontSize: isMobile ? '1rem' : '1.15rem', fontWeight: '600', marginBottom: isMobile ? '18px' : '24px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
               {questions[current].questionText || questions[current].text || questions[current].question || `Question ${current + 1}`}
             </h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '10px' : '12px' }}>
               {questions[current].options?.map((option, optIdx) => (
                 <button
                   key={optIdx}
@@ -265,7 +382,7 @@ export default function ExamPage() {
                   }}
                   style={{
                     textAlign: 'left',
-                    padding: '14px 16px',
+                    padding: isMobile ? '14px 14px' : '14px 16px',
                     borderRadius: 'var(--radius-md)',
                     background: submitted 
                       ? 'var(--bg-hover)' 
@@ -277,7 +394,10 @@ export default function ExamPage() {
                     cursor: submitted ? 'not-allowed' : 'pointer',
                     opacity: submitted ? 0.6 : 1,
                     transition: 'all 0.2s',
-                    fontSize: '0.95rem',
+                    fontSize: isMobile ? '0.9rem' : '0.95rem',
+                    minHeight: isMobile ? '44px' : 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
                   }}
                   onMouseEnter={(e) => {
                     if (!submitted && answers[questions[current]._id] !== option.label) {
@@ -290,44 +410,58 @@ export default function ExamPage() {
                     }
                   }}
                 >
-                  <span style={{ marginRight: '12px', fontWeight: '600', color: 'var(--accent)' }}>
+                  <span style={{ marginRight: '12px', fontWeight: '600', color: 'var(--accent)', flexShrink: 0 }}>
                     {String.fromCharCode(65 + optIdx)}.
                   </span>
-                  {option.text}
+                  <span style={{ wordBreak: 'break-word' }}>{option.text}</span>
                 </button>
               ))}
             </div>
 
             {/* Navigation Buttons */}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', marginTop: isMobile ? '24px' : '32px', paddingTop: isMobile ? '16px' : '24px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setCurrent(Math.max(0, current - 1))}
                 disabled={current === 0}
                 style={{
-                  padding: '12px 24px',
+                  padding: isMobile ? '10px 14px' : '12px 24px',
                   borderRadius: 'var(--radius-md)',
                   background: current === 0 ? 'var(--bg-hover)' : 'var(--bg-card)',
                   border: '1px solid var(--border)',
                   color: 'var(--text-secondary)',
                   cursor: current === 0 ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s',
+                  fontSize: isMobile ? '0.85rem' : '0.9rem',
+                  fontWeight: '600',
+                  minHeight: isMobile ? '44px' : 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flex: isMobile ? 1 : 'auto',
                 }}
               >
-                ← Previous
+                ← Prev
               </button>
 
               <button
                 onClick={() => setCurrent(Math.min(questions.length - 1, current + 1))}
                 disabled={current === questions.length - 1}
                 style={{
-                  padding: '12px 24px',
+                  padding: isMobile ? '10px 14px' : '12px 24px',
                   borderRadius: 'var(--radius-md)',
                   background: current === questions.length - 1 ? 'var(--bg-hover)' : 'var(--bg-card)',
                   border: '1px solid var(--border)',
                   color: 'var(--text-secondary)',
                   cursor: current === questions.length - 1 ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s',
-                  marginRight: 'auto',
+                  fontSize: isMobile ? '0.85rem' : '0.9rem',
+                  fontWeight: '600',
+                  minHeight: isMobile ? '44px' : 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flex: isMobile ? 1 : 'auto',
+                  marginRight: isMobile ? '0' : 'auto',
                 }}
               >
                 Next →
@@ -337,9 +471,9 @@ export default function ExamPage() {
                 onClick={() => setShowSubmitModal(true)}
                 disabled={submitting}
                 className="btn-primary"
-                style={{ padding: '12px 32px', opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+                style={{ padding: isMobile ? '10px 14px' : '12px 32px', opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer', fontSize: isMobile ? '0.85rem' : '0.9rem', fontWeight: '600', minHeight: isMobile ? '44px' : 'auto', flex: isMobile ? 1 : 'auto' }}
               >
-                {submitting ? 'Submitting...' : 'Submit Test'}
+                {submitting ? 'Submitting...' : '✓ Submit'}
               </button>
             </div>
           </div>
@@ -359,35 +493,38 @@ export default function ExamPage() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
+          padding: isMobile ? '16px' : '0',
         }}>
           <div style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
-            padding: '32px',
-            maxWidth: '400px',
+            padding: isMobile ? '24px 16px' : '32px',
+            maxWidth: isMobile ? '100%' : '400px',
             textAlign: 'center',
+            width: '100%',
           }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>⚠️</div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: isMobile ? '2rem' : '2.5rem', marginBottom: '16px' }}>⚠️</div>
+            <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.5rem', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>
               Submit Your Exam?
             </h2>
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
+            <p style={{ fontSize: isMobile ? '0.9rem' : '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
               Once you submit, you will not be able to edit your answers. Are you sure you want to submit now?
             </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', justifyContent: 'center', flexDirection: isMobile ? 'column' : 'row' }}>
               <button
                 onClick={() => setShowSubmitModal(false)}
                 style={{
                   background: 'var(--bg-hover)',
                   border: '1px solid var(--border)',
                   color: 'var(--text-secondary)',
-                  padding: '10px 24px',
+                  padding: isMobile ? '12px 16px' : '10px 24px',
                   borderRadius: 'var(--radius-md)',
                   cursor: 'pointer',
                   fontSize: '0.9rem',
                   fontWeight: '600',
                   transition: 'all 0.2s',
+                  minHeight: isMobile ? '44px' : 'auto',
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.borderColor = 'var(--border-accent)';
@@ -403,13 +540,13 @@ export default function ExamPage() {
               <button
                 onClick={() => {
                   setShowSubmitModal(false);
-                  handleSubmit(false); // Manual submit, not auto
+                  handleSubmit(false);
                 }}
                 disabled={submitting}
                 style={{
                   background: 'var(--accent)',
                   color: '#fff',
-                  padding: '10px 24px',
+                  padding: isMobile ? '12px 16px' : '10px 24px',
                   borderRadius: 'var(--radius-md)',
                   cursor: submitting ? 'not-allowed' : 'pointer',
                   fontSize: '0.9rem',
@@ -417,6 +554,7 @@ export default function ExamPage() {
                   border: 'none',
                   opacity: submitting ? 0.7 : 1,
                   transition: 'all 0.2s',
+                  minHeight: isMobile ? '44px' : 'auto',
                 }}
                 onMouseEnter={(e) => {
                   if (!submitting) e.target.style.opacity = '0.9';
